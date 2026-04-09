@@ -1,11 +1,12 @@
 import React from "react";
 import { ScrollView, StyleSheet, Text, View, Dimensions } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { LineChart } from "react-native-gifted-charts";
+import { LineChart, BarChart } from "react-native-gifted-charts";
 import { Card } from "../components/Card";
 import { useCycleStore } from "../store/useCycleStore";
 import { buildInsights } from "../features/ai/insightEngine";
 import { colors, spacing, typography, radius } from "../theme/tokens";
+import { getCycleHistory } from "../lib/analytics";
 
 const { width } = Dimensions.get("window");
 
@@ -22,6 +23,13 @@ export function InsightsScreen() {
       value: entry.symptoms.energy === "high" ? 3 : entry.symptoms.energy === "medium" ? 2 : 1,
       label: entry.date.slice(5) // MM-DD
     }));
+
+  const cycleHistory = getCycleHistory(entries);
+  const barData = cycleHistory.slice(-6).map(c => ({
+    value: c.length,
+    label: c.startDate.slice(5),
+    frontColor: c.length > 32 || c.length < 24 ? colors.warning : colors.primary,
+  }));
 
   return (
     <View style={styles.screen}>
@@ -53,6 +61,28 @@ export function InsightsScreen() {
             yAxisTextStyle={{ color: colors.textMuted, fontSize: 10 }}
             xAxisLabelTextStyle={{ color: colors.textMuted, fontSize: 10 }}
           />
+        </View>
+
+        <View style={styles.chartContainer}>
+          <Text style={styles.chartTitle}>Cycle Length History (Days)</Text>
+          {barData.length > 0 ? (
+            <BarChart
+              data={barData}
+              barWidth={22}
+              noOfSections={3}
+              barBorderRadius={4}
+              frontColor={colors.primary}
+              yAxisThickness={0}
+              xAxisThickness={0}
+              hideRules
+              yAxisLabelTexts={['0', '15', '30', '45']}
+              yAxisTextStyle={{ color: colors.textMuted, fontSize: 10 }}
+              xAxisLabelTextStyle={{ color: colors.textMuted, fontSize: 10 }}
+              width={width - spacing.xl * 2}
+            />
+          ) : (
+            <Text style={styles.body}>Insufficient data to show cycle history. Keep logging!</Text>
+          )}
         </View>
 
         <Text style={styles.sectionTitle}>Personalized Guidance</Text>

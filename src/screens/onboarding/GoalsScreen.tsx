@@ -12,9 +12,11 @@ import { colors, spacing, radius, typography } from "../../theme/tokens";
 
 const GOALS = [
   { id: "predict", label: "Predict my next period", icon: "🗓️" },
-  { id: "fertility", label: "Track my fertility window", icon: "✨" },
-  { id: "symptoms", label: "Manage PMS and symptoms", icon: "🧘" },
-  { id: "irregularity", label: "Understand cycle irregularity", icon: "📊" }
+  { id: "fertility", label: "Track for conception", icon: "✨" },
+  { id: "syncing", label: "Cycle syncing for productivity", icon: "⚡" },
+  { id: "symptoms", label: "Manage PMS and mood swings", icon: "🧘" },
+  { id: "irregularity", label: "Understand cycle irregularity", icon: "📊" },
+  { id: "hormonal", label: "Optimizing hormonal health", icon: "🩸" }
 ];
 
 export function GoalsScreen() {

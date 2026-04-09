@@ -10,36 +10,51 @@ export interface PhaseInfo {
   icon: string;
 }
 
-export const PHASE_METADATA: Record<CyclePhase, PhaseInfo> = {
+export const PHASE_METADATA: Record<CyclePhase, PhaseInfo & { brief: string; focus: string; social: string }> = {
   menstrual: {
     name: "Menstrual Phase",
     description: "Your estrogen and progesterone levels are low. The uterine lining is shedding.",
     recommendation: "Focus on rest, hydration, and gentle movement like yoga.",
-    icon: "water"
+    icon: "water",
+    brief: "Your body is working hard to reset. Prioritize comfort and listen to your energy cues.",
+    focus: "Rest & Intuition",
+    social: "Low - Choose cozy nights in"
   },
   follicular: {
     name: "Follicular Phase",
     description: "Estrogen levels start to rise, preparing an egg for release.",
     recommendation: "Energy is increasing. Great time for trying new things and creative projects.",
-    icon: "leaf"
+    icon: "leaf",
+    brief: "New beginnings! Your brain is primed for brainstorming and starting new habits.",
+    focus: "Planning & Growth",
+    social: "Medium - Reconnect with friends"
   },
   ovulatory: {
     name: "Ovulatory Phase",
     description: "Luteinizing hormone peaks, triggering the release of an egg.",
     recommendation: "Peak fertility and high energy. Best time for high-intensity workouts and social events.",
-    icon: "sunny"
+    icon: "sunny",
+    brief: "You are at your peak! Communication and confidence are naturally high today.",
+    focus: "Execution & Power",
+    social: "High - Perfect for networking"
   },
   luteal: {
     name: "Luteal Phase",
     description: "Progesterone peaks to pull the uterine lining together. PMS may occur.",
     recommendation: "Energy may dip. Focus on strength training and prioritize sleep.",
-    icon: "moon"
+    icon: "moon",
+    brief: "The nesting phase. Focus on crossing things off your list and preparing for rest.",
+    focus: "Completion & Care",
+    social: "Low/Med - Deep conversations only"
   },
   unknown: {
     name: "Transition",
     description: "Calculating your next phase based on your history.",
     recommendation: "Keep logging daily to improve prediction accuracy.",
-    icon: "help-circle"
+    icon: "help-circle",
+    brief: "We're matching your logs to your cycle patterns. Keep tracking!",
+    focus: "Observation",
+    social: "Balanced"
   }
 };
 

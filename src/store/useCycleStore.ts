@@ -217,6 +217,7 @@ export const useCycleStore = create<CycleState>((set, get) => ({
       ];
 
       const newEntries = [];
+      const stressMetas = ['low', 'medium', 'high'];
       for (const cycle of rawCycles) {
         for (let i = 0; i < cycle.days; i++) {
           const date = new Date(Date.UTC(cycle.year, cycle.month, cycle.day + i));
@@ -224,7 +225,14 @@ export const useCycleStore = create<CycleState>((set, get) => ({
             user_id: user.id,
             date: date.toISOString().slice(0, 10),
             is_period_day: true,
-            symptoms: { flow: 'medium', mood: 'stable', energy: 'medium', cramps: 'none' }
+            symptoms: { 
+              flow: i === 0 || i === 4 ? 'light' : 'heavy', 
+              mood: 'low', 
+              energy: 'low', 
+              cramps: i < 2 ? 'moderate' : 'mild',
+              sleepHours: 6 + Math.random() * 2,
+              stressLevel: stressMetas[Math.floor(Math.random() * 3)]
+            }
           });
         }
       }

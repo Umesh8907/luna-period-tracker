@@ -5,6 +5,8 @@ export type SymptomLog = {
   mood: "low" | "stable" | "high";
   energy: "low" | "medium" | "high";
   flow: "none" | "light" | "medium" | "heavy";
+  sleepHours: number;
+  stressLevel: "low" | "medium" | "high";
   notes?: string;
 };
 

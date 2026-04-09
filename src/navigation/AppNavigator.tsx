@@ -5,6 +5,7 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { View, ActivityIndicator, Platform } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { HomeScreen } from "../screens/HomeScreen";
+import { DailyLogScreen } from "../screens/DailyLogScreen";
 import { CycleLogScreen } from "../screens/CycleLogScreen";
 import { InsightsScreen } from "../screens/InsightsScreen";
 import { SettingsScreen } from "../screens/SettingsScreen";
@@ -15,7 +16,7 @@ import { useCycleStore } from "../store/useCycleStore";
 import { colors, spacing, typography } from "../theme/tokens";
 import { ProfileScreen } from "../screens/ProfileScreen";
 import { HeaderProfile } from "../components/HeaderProfile";
-import { requestNotificationPermissions, scheduleCycleReminders } from "../lib/notifications";
+import { requestNotificationPermissions, syncAllNotifications } from "../lib/notifications";
 import { predictNextCycle } from "../features/ai/predictionModel";
 import { OnboardingNavigator } from "./OnboardingNavigator";
 
@@ -46,7 +47,7 @@ function MainTabs() {
         headerRight: () => <HeaderProfile />,
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.textMuted,
-        tabBarStyle: { borderTopWidth: 1, borderTopColor: colors.border }
+        tabBarStyle: { borderTopWidth: 1, borderTopColor: colors.border, height: Platform.OS === 'ios' ? 88 : 68, paddingBottom: Platform.OS === 'ios' ? 28 : 12 }
       }}
     >
       <Tab.Screen 
@@ -58,10 +59,18 @@ function MainTabs() {
         }} 
       />
       <Tab.Screen 
-        name="Log" 
+        name="DailyLog" 
+        component={DailyLogScreen} 
+        options={{ 
+          title: "Daily Log",
+          tabBarIcon: ({ color }) => <Ionicons name="journal" size={24} color={color} /> 
+        }} 
+      />
+      <Tab.Screen 
+        name="Calendar" 
         component={CycleLogScreen} 
         options={{ 
-          title: "Cycle History",
+          title: "Calendar",
           tabBarIcon: ({ color }) => <Ionicons name="calendar" size={24} color={color} /> 
         }} 
       />
@@ -108,11 +117,21 @@ export function AppNavigator() {
   }, []);
 
   useEffect(() => {
-    if (session) {
-      console.log("[AppNavigator] Fetching data...");
+    if (session && !isInitialized) {
+      console.log("[AppNavigator] Initial data fetch...");
       fetchData();
     }
-  }, [session]);
+  }, [session, isInitialized]);
+
+  useEffect(() => {
+    if (session && isInitialized && profile.hasCompletedOnboarding) {
+      console.log("[AppNavigator] Syncing notifications...");
+      const prediction = predictNextCycle(profile, entries);
+      const today = new Date().toISOString().slice(0, 10);
+      const hasLoggedToday = entries.some(e => e.date === today);
+      syncAllNotifications(prediction, hasLoggedToday);
+    }
+  }, [session, isInitialized, profile, entries]);
 
   if (loading || !isInitialized) {
     return (

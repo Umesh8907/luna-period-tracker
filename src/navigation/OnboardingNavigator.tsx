@@ -5,6 +5,7 @@ import { AgeScreen } from "../screens/onboarding/AgeScreen";
 import { CycleStatsScreen } from "../screens/onboarding/CycleStatsScreen";
 import { LastPeriodScreen } from "../screens/onboarding/LastPeriodScreen";
 import { GoalsScreen } from "../screens/onboarding/GoalsScreen";
+import { MedicalDisclaimerScreen } from "../screens/onboarding/MedicalDisclaimerScreen";
 
 const Stack = createNativeStackNavigator();
 
@@ -16,6 +17,7 @@ export function OnboardingNavigator() {
         animation: "slide_from_right"
       }}
     >
+      <Stack.Screen name="Disclaimer" component={MedicalDisclaimerScreen} />
       <Stack.Screen name="Name" component={NameScreen} />
       <Stack.Screen name="Age" component={AgeScreen} />
       <Stack.Screen name="CycleStats" component={CycleStatsScreen} />

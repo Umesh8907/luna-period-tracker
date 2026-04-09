@@ -1,86 +1,168 @@
-import React from "react";
-import { ScrollView, StyleSheet, Text, View, RefreshControl, TouchableOpacity } from "react-native";
+import React, { useMemo, useEffect } from "react";
+import { ScrollView, StyleSheet, Text, View, RefreshControl, TouchableOpacity, Dimensions } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Card } from "../components/Card";
-import { CycleCircle } from "../components/CycleCircle";
+import { Ionicons } from "@expo/vector-icons";
+import Animated, { 
+  FadeInDown, 
+  useAnimatedStyle, 
+  withTiming, 
+  interpolateColor,
+  useDerivedValue
+} from "react-native-reanimated";
+
 import { useCycleStore } from "../store/useCycleStore";
-import { predictNextCycle } from "../features/ai/predictionModel";
-import { daysBetween, formatLongDate } from "../lib/date";
+import { predictNextCycle, getPhaseForDate, PHASE_METADATA, CyclePhase } from "../features/ai/predictionModel";
+import { daysBetween, formatLongDate, getTodayISO } from "../lib/date";
 import { colors, radius, spacing, typography } from "../theme/tokens";
+import { CycleStatusHero } from "../components/CycleStatusHero";
+import { HealthInsightCard } from "../components/HealthInsightCard";
+
+const { width } = Dimensions.get("window");
+
+const PHASE_THEMES: Record<CyclePhase, string> = {
+  menstrual: "#E96479",
+  follicular: "#7DB9B6",
+  ovulatory: "#F9D949",
+  luteal: "#8294C4",
+  unknown: colors.primary
+};
+
+function DailyBriefItem({ icon, label, value, themeColor }: { icon: any; label: string; value: string; themeColor: string }) {
+  return (
+    <View style={styles.briefItem}>
+      <View style={[styles.briefIcon, { backgroundColor: themeColor + '15' }]}>
+        <Ionicons name={icon} size={16} color={themeColor} />
+      </View>
+      <View>
+        <Text style={styles.briefLabel}>{label}</Text>
+        <Text style={styles.briefValue}>{value}</Text>
+      </View>
+    </View>
+  );
+}
 
 export function HomeScreen() {
   const navigation = useNavigation<any>();
   const insets = useSafeAreaInsets();
   const { profile, entries, loading, fetchData } = useCycleStore();
-  const prediction = predictNextCycle(profile, entries);
   
-  const today = new Date().toISOString().slice(0, 10);
+  const today = useMemo(() => getTodayISO(), []);
+  const prediction = useMemo(() => predictNextCycle(profile, entries), [profile, entries]);
+  
+  const currentPhase = getPhaseForDate(today, prediction, entries);
+  const phaseInfo = PHASE_METADATA[currentPhase];
+  const themeColor = PHASE_THEMES[currentPhase];
+  const hasLoggedToday = entries.some(e => e.date === today);
+
   const daysSinceStart = daysBetween(profile.lastPeriodStart, today);
   const currentDay = Math.max(1, (daysSinceStart % profile.averageCycleLength) + 1);
   const daysLeft = daysBetween(today, prediction.nextPeriodDate);
 
-  // Simple phase calculation for UI display
-  let phase = "Follicular Phase";
-  if (currentDay <= profile.averagePeriodLength) phase = "Menstrual Phase";
-  else if (currentDay >= 13 && currentDay <= 15) phase = "Ovulatory Phase";
-  else if (currentDay > 15) phase = "Luteal Phase";
+  // Animated background color
+  const backgroundColor = useDerivedValue(() => {
+    return withTiming(themeColor, { duration: 1000 });
+  });
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    backgroundColor: backgroundColor.value + '08', // Very subtle tint
+  }));
 
   return (
     <View style={styles.screen}>
+      <Animated.View style={[StyleSheet.absoluteFill, animatedStyle]} />
+      
       <ScrollView 
-        style={styles.screen} 
-        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={[styles.content, { paddingTop: insets.top + spacing.md }]}
         refreshControl={
-          <RefreshControl refreshing={loading} onRefresh={fetchData} tintColor={colors.primary} />
+          <RefreshControl refreshing={loading} onRefresh={fetchData} tintColor={themeColor} />
         }
       >
-        <View style={styles.hero}>
-          <Text style={styles.kicker}>Good Morning, {profile.name}</Text>
-          <CycleCircle 
-            currentDay={currentDay} 
-            totalDays={profile.averageCycleLength} 
-            phase={phase}
-          />
-        </View>
-
-        <Card 
-          eyebrow="Next cycle" 
-          title={`${daysLeft} day${daysLeft === 1 ? "" : "s"} until expected start`} 
-          tone="accent"
+        {/* Header */}
+        <Animated.View 
+          entering={FadeInDown.delay(100).duration(800)}
+          style={styles.header}
         >
-          <Text style={styles.onAccentText}>
-            Projected around {formatLongDate(prediction.nextPeriodDate)}
-          </Text>
-        </Card>
-
-        <View style={styles.grid}>
-          <View style={styles.metric}>
-            <Text style={styles.metricLabel}>Avg. cycle</Text>
-            <Text style={styles.metricValue}>{prediction.cycleLengthAverage} days</Text>
+          <View>
+            <Text style={styles.greeting}>Good Morning,</Text>
+            <Text style={styles.name}>{profile.name} ✨</Text>
           </View>
-          <View style={styles.metric}>
-            <Text style={styles.metricLabel}>Avg. period</Text>
-            <Text style={styles.metricValue}>{profile.averagePeriodLength} days</Text>
-          </View>
-        </View>
+          <TouchableOpacity 
+            style={styles.profileButton}
+            onPress={() => navigation.navigate("Profile")}
+          >
+            <Ionicons name="person-circle-outline" size={32} color={colors.text} />
+          </TouchableOpacity>
+        </Animated.View>
 
-        <Card eyebrow="Recent activity" title="Latest Logs">
-          {entries.length > 0 ? (
-            entries.slice(0, 3).map((entry) => (
-              <View key={entry.id} style={styles.row}>
-                <View>
-                  <Text style={styles.body}>{formatLongDate(entry.date)}</Text>
-                  <Text style={styles.caption}>{entry.isPeriodDay ? "Period Day" : "Log"}</Text>
-                </View>
-                <Text style={styles.badge}>{entry.symptoms.flow}</Text>
+        {/* Hero */}
+        <Animated.View entering={FadeInDown.delay(300).duration(800)}>
+          <CycleStatusHero 
+            currentDay={currentDay}
+            totalDays={profile.averageCycleLength}
+            phase={phaseInfo.name}
+            themeColor={themeColor}
+            nextPeriodDays={daysLeft}
+          />
+        </Animated.View>
+
+        {/* Quick Log Action */}
+        {!hasLoggedToday && (
+          <Animated.View entering={FadeInDown.delay(500).duration(800)}>
+            <TouchableOpacity 
+              style={[styles.quickLogCard, { borderColor: themeColor + '40' }]} 
+              onPress={() => navigation.navigate("DailyLog")}
+            >
+              <View style={[styles.quickLogIcon, { backgroundColor: themeColor }]}>
+                <Ionicons name="pencil" size={20} color="#fff" />
               </View>
-            ))
-          ) : (
-            <Text style={styles.body}>No logs found. Start tracking in the Log tab.</Text>
-          )}
-        </Card>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.quickLogTitle}>How are you feeling?</Text>
+                <Text style={styles.quickLogSubtitle}>Log your symptoms for better insights</Text>
+              </View>
+              <Ionicons name="arrow-forward" size={20} color={themeColor} />
+            </TouchableOpacity>
+          </Animated.View>
+        )}
 
+        {/* Daily Insights Section */}
+        <Animated.View entering={FadeInDown.delay(700).duration(800)}>
+          <Text style={styles.sectionTitle}>Daily Guidance</Text>
+          <View style={styles.briefGrid}>
+            <DailyBriefItem 
+              icon="bulb" 
+              label="Focus" 
+              value={phaseInfo.focus} 
+              themeColor={themeColor} 
+            />
+            <DailyBriefItem 
+              icon="people" 
+              label="Social" 
+              value={phaseInfo.social} 
+              themeColor={themeColor} 
+            />
+          </View>
+        </Animated.View>
+
+        {/* Health Insights */}
+        <Animated.View entering={FadeInDown.delay(900).duration(800)}>
+          <Text style={styles.sectionTitle}>For You</Text>
+          <HealthInsightCard 
+            title="Optimal Movement"
+            description={phaseInfo.recommendation}
+            icon="fitness"
+            themeColor={themeColor}
+          />
+          <HealthInsightCard 
+            title="Cycle Phase Guide"
+            description={phaseInfo.brief}
+            icon="information-circle"
+            themeColor={themeColor}
+          />
+        </Animated.View>
+
+        <View style={{ height: 40 }} />
       </ScrollView>
     </View>
   );
@@ -92,69 +174,92 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background
   },
   content: {
-    padding: spacing.lg,
-    gap: spacing.md
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.xl
   },
-  hero: {
-    alignItems: "center",
-    paddingTop: spacing.md,
-    gap: spacing.sm
-  },
-  kicker: {
-    color: colors.text,
-    fontSize: typography.heading,
-    fontWeight: "700",
-    textAlign: "center"
-  },
-  onAccentText: {
-    color: "#FFF",
-    fontSize: typography.body,
-    lineHeight: 22
-  },
-  grid: {
-    flexDirection: "row",
-    gap: spacing.md
-  },
-  metric: {
-    flex: 1,
-    backgroundColor: colors.surfaceAlt,
-    padding: spacing.md,
-    borderRadius: radius.md
-  },
-  metricLabel: {
-    color: colors.textMuted,
-    fontSize: typography.caption
-  },
-  metricValue: {
-    color: colors.text,
-    fontSize: typography.heading,
-    fontWeight: "700",
-    marginTop: spacing.xs
-  },
-  body: {
-    color: colors.text,
-    fontSize: typography.body,
-    lineHeight: 22,
-    fontWeight: "600"
-  },
-  caption: {
-    color: colors.textMuted,
-    fontSize: typography.caption
-  },
-  row: {
+  header: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: spacing.sm
   },
-  badge: {
-    backgroundColor: colors.primarySoft,
+  greeting: {
+    fontSize: 16,
+    color: colors.textMuted,
+    fontWeight: "500",
+  },
+  name: {
+    fontSize: 24,
+    fontWeight: "800",
     color: colors.text,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    borderRadius: radius.pill,
-    overflow: "hidden",
-    textTransform: "capitalize",
-    fontWeight: "500"
+  },
+  profileButton: {
+    padding: 4,
+  },
+  quickLogCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: colors.surface,
+    padding: spacing.md,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderStyle: "dashed",
+    marginBottom: spacing.lg,
+  },
+  quickLogIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: spacing.md,
+  },
+  quickLogTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: colors.text,
+  },
+  quickLogSubtitle: {
+    fontSize: 12,
+    color: colors.textMuted,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: "800",
+    color: colors.text,
+    marginBottom: spacing.md,
+  },
+  briefGrid: {
+    flexDirection: "row",
+    gap: spacing.md,
+    marginBottom: spacing.lg,
+  },
+  briefItem: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: colors.surface,
+    padding: spacing.sm,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    gap: spacing.sm,
+  },
+  briefIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  briefLabel: {
+    fontSize: 10,
+    color: colors.textMuted,
+    textTransform: "uppercase",
+    fontWeight: "700",
+  },
+  briefValue: {
+    fontSize: 12,
+    color: colors.text,
+    fontWeight: "800",
   }
 });

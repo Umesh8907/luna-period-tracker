@@ -1,14 +1,13 @@
 import { daysBetween, formatLongDate } from "../../lib/date";
 import { CycleEntry, AIInsight, UserProfile } from "../cycle/types";
 import { withMedicalGuardrails } from "./guardrails";
-import { predictNextCycle } from "./predictionModel";
+import { predictNextCycle, getPhaseForDate } from "./predictionModel";
 
 export function buildInsights(profile: UserProfile, entries: CycleEntry[]): AIInsight[] {
   const prediction = predictNextCycle(profile, entries);
   const today = new Date().toISOString().slice(0, 10);
   const daysUntilNextPeriod = daysBetween(today, prediction.nextPeriodDate);
 
-  const lowEnergyDays = entries.filter((entry) => entry.symptoms.energy === "low").length;
   const heavyFlowDays = entries.filter((entry) => entry.symptoms.flow === "heavy").length;
 
   const insights: AIInsight[] = [
@@ -18,25 +17,52 @@ export function buildInsights(profile: UserProfile, entries: CycleEntry[]): AIIn
       summary: `Your next cycle is projected to start on ${formatLongDate(prediction.nextPeriodDate)}. This prediction is based on ${entries.length > 0 ? "your recent logs" : "your profile defaults"}.`,
       confidence: entries.length >= 3 ? "high" : "medium",
       type: "prediction"
-    },
-    {
-      id: "ovulation-1",
-      title: "Fertility Window",
-      summary: `Your estimated fertile window is from ${formatLongDate(prediction.fertileWindowStart)} to ${formatLongDate(prediction.fertileWindowEnd)}, with ovulation predicted around ${formatLongDate(prediction.ovulationDate)}.`,
-      confidence: "medium",
-      type: "prediction"
-    },
-    {
-      id: "pattern-1",
-      title: "Energy & Rhythm",
-      summary:
-        lowEnergyDays > 1
-          ? "We noticed a pattern of lower energy near your cycle start. Consider scheduling lighter workouts or more rest during those days."
-          : "Your energy levels appear stable based on recent logs. Keep tracking to see how your rhythm evolves with your cycle.",
-      confidence: "medium",
-      type: "pattern"
     }
   ];
+
+  // 1. Advanced Correlation: Energy per Phase
+  const logsWithPhases = entries.map(e => ({
+    ...e,
+    phase: getPhaseForDate(e.date, prediction, entries)
+  }));
+
+  const ovulatoryLogs = logsWithPhases.filter(l => l.phase === 'ovulatory');
+  const highEnergyInOvulation = ovulatoryLogs.filter(l => l.symptoms.energy === 'high').length;
+
+  if (ovulatoryLogs.length >= 2 && highEnergyInOvulation > 0) {
+    insights.push({
+      id: "correlation-energy",
+      title: "Energy Pattern Detected",
+      summary: `We noticed you've logged high energy during ${Math.round((highEnergyInOvulation / ovulatoryLogs.length) * 100)}% of your Ovulatory phases. This is a great time for your most demanding workouts.`,
+      confidence: "high",
+      type: "pattern"
+    });
+  }
+
+  // 2. Mood Rhythm
+  const lutealLogs = logsWithPhases.filter(l => l.phase === 'luteal');
+  const stableMoodInLuteal = lutealLogs.filter(l => l.symptoms.mood === 'stable').length;
+
+  if (lutealLogs.length >= 2) {
+    if (stableMoodInLuteal / lutealLogs.length < 0.5) {
+       insights.push({
+        id: "correlation-mood",
+        title: "Luteal Sensitivity",
+        summary: "Your logs show more mood variability during your Luteal phase. This often correlates with progesterone shifts. Prioritizing magnesium or gentle walks may help.",
+        confidence: "medium",
+        type: "wellness"
+      });
+    }
+  }
+
+  // 3. Fertility Window (Standard)
+  insights.push({
+    id: "ovulation-1",
+    title: "Fertility Window",
+    summary: `Your estimated fertile window is from ${formatLongDate(prediction.fertileWindowStart)} to ${formatLongDate(prediction.fertileWindowEnd)}, with ovulation predicted around ${formatLongDate(prediction.ovulationDate)}.`,
+    confidence: "medium",
+    type: "prediction"
+  });
 
   if (prediction.isIrregular) {
     insights.push({
