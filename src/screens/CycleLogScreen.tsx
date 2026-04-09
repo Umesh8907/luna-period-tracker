@@ -50,11 +50,11 @@ export function CycleLogScreen() {
 
   return (
     <View style={styles.screen}>
+      <View style={[styles.stickyHeader, { paddingTop: insets.top + spacing.md }]}>
+        <Text style={styles.title}>Menstrual Calendar</Text>
+        <Text style={styles.subtitle}>Track your cycle and predict your next period.</Text>
+      </View>
       <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
-        <View style={styles.header}>
-          <Text style={styles.title}>Menstrual Calendar</Text>
-          <Text style={styles.subtitle}>Track your cycle and predict your next period.</Text>
-        </View>
 
         <CycleCalendar 
           profile={profile} 
@@ -123,6 +123,7 @@ export function CycleLogScreen() {
              </TouchableOpacity>
           </Card>
         ))}
+        <View style={{ height: 100 }} />
       </ScrollView>
     </View>
   );
@@ -141,7 +142,14 @@ function getPhaseColor(phase: string) {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
   content: { padding: spacing.lg, gap: spacing.md },
-  header: { gap: spacing.xs },
+  stickyHeader: {
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.md,
+    backgroundColor: colors.background,
+    gap: spacing.xs,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border + "11", // Subtle separator
+  },
   title: { color: colors.text, fontSize: typography.title, fontWeight: "800" },
   subtitle: { color: colors.textMuted, fontSize: typography.body },
   

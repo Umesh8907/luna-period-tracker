@@ -28,9 +28,7 @@ export function ProfileScreen() {
   return (
     <View style={[styles.screen, { paddingTop: insets.top }]}>
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-          <Ionicons name="chevron-back" size={28} color={colors.text} />
-        </TouchableOpacity>
+        <View style={{ width: 44 }} />
         <Text style={styles.headerTitle}>Profile</Text>
         <View style={{ width: 44 }} />
       </View>
@@ -76,6 +74,7 @@ export function ProfileScreen() {
         </View>
 
         <Text style={styles.versionText}>Luna Version 1.0.0</Text>
+        <View style={{ height: 100 }} />
       </ScrollView>
     </View>
   );

@@ -33,59 +33,76 @@ export function InsightsScreen() {
 
   return (
     <View style={styles.screen}>
+      <View style={[styles.stickyHeader, { paddingTop: insets.top + spacing.md }]}>
+        <View style={styles.headerTop}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.title}>Health Insights</Text>
+            <Text style={styles.subtitle}>Analyzing your cycle patterns ✨</Text>
+          </View>
+        </View>
+      </View>
       <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
-        <View style={styles.header}>
-          <Text style={styles.title}>Health Insights</Text>
-          <Text style={styles.subtitle}>AI-driven patterns and wellness guidance.</Text>
-        </View>
 
-        <View style={styles.chartContainer}>
-          <Text style={styles.chartTitle}>Energy Trend (Last 7 Logs)</Text>
-          <LineChart
-            data={energyData}
-            color={colors.primary}
-            thickness={3}
-            dataPointsColor={colors.primary}
-            areaChart
-            startFillColor={colors.primarySoft}
-            startOpacity={0.4}
-            endOpacity={0.1}
-            curved
-            width={width - spacing.xl * 2}
-            hideRules
-            initialSpacing={10}
-            noOfSections={3}
-            yAxisColor={colors.border}
-            xAxisColor={colors.border}
-            yAxisLabelTexts={['','Low', 'Med', 'High']}
-            yAxisTextStyle={{ color: colors.textMuted, fontSize: 10 }}
-            xAxisLabelTextStyle={{ color: colors.textMuted, fontSize: 10 }}
-          />
-        </View>
-
-        <View style={styles.chartContainer}>
-          <Text style={styles.chartTitle}>Cycle Length History (Days)</Text>
-          {barData.length > 0 ? (
-            <BarChart
-              data={barData}
-              barWidth={22}
-              noOfSections={3}
-              barBorderRadius={4}
-              frontColor={colors.primary}
-              yAxisThickness={0}
-              xAxisThickness={0}
+        <Card title="Energy Trend" eyebrow="Last 7 Logs">
+          <View style={styles.chartWrapper}>
+            <LineChart
+              data={energyData}
+              color={colors.primary}
+              thickness={4}
+              dataPointsColor={colors.primary}
+              dataPointsRadius={4}
+              areaChart
+              startFillColor={colors.primary}
+              startOpacity={0.2}
+              endOpacity={0.01}
+              curved
+              width={width - spacing.xl * 3}
               hideRules
-              yAxisLabelTexts={['0', '15', '30', '45']}
-              yAxisTextStyle={{ color: colors.textMuted, fontSize: 10 }}
-              xAxisLabelTextStyle={{ color: colors.textMuted, fontSize: 10 }}
-              width={width - spacing.xl * 2}
+              initialSpacing={20}
+              spacing={40}
+              noOfSections={2}
+              maxValue={3}
+              yAxisColor="transparent"
+              xAxisColor={colors.border}
+              yAxisLabelTexts={['Low', 'Med', 'High']}
+              yAxisTextStyle={{ color: colors.textMuted, fontSize: 10, fontWeight: "600" }}
+              xAxisLabelTextStyle={{ color: colors.textMuted, fontSize: 10, fontWeight: "600" }}
+              hideDataPoints={false}
+              labelRotation={-45}
             />
+          </View>
+        </Card>
+
+        <Card title="Cycle History" eyebrow="Duration in Days">
+          {barData.length > 0 ? (
+            <View style={styles.chartWrapper}>
+              <BarChart
+                data={barData}
+                barWidth={32}
+                spacing={24}
+                noOfSections={3}
+                maxValue={45}
+                barBorderRadius={6}
+                yAxisThickness={0}
+                xAxisThickness={0}
+                hideRules
+                yAxisLabelTexts={['0d', '15d', '30d', '45d']}
+                yAxisTextStyle={{ color: colors.textMuted, fontSize: 10, fontWeight: "600" }}
+                xAxisLabelTextStyle={{ color: colors.textMuted, fontSize: 10, fontWeight: "600" }}
+                width={width - spacing.xl * 3}
+                isAnimated
+                animationDuration={1000}
+              />
+            </View>
           ) : (
             <Text style={styles.body}>Insufficient data to show cycle history. Keep logging!</Text>
           )}
+        </Card>
+
+        <View style={styles.sectionHeaderRow}>
+          <Text style={styles.sectionTitle}>Personalized Guidance</Text>
         </View>
 
-        <Text style={styles.sectionTitle}>Personalized Guidance</Text>
         {insights.map((insight) => (
           <Card 
             key={insight.id} 
@@ -96,13 +113,14 @@ export function InsightsScreen() {
             <Text style={insight.type === "prediction" ? styles.onAccentText : styles.body}>
               {insight.summary}
             </Text>
-            <View style={styles.footer}>
+            <View style={[styles.cardFooter, insight.type === "prediction" && styles.onAccentFooter]}>
               <Text style={insight.type === "prediction" ? styles.onAccentTextMuted : styles.caption}>
                 Confidence: {insight.confidence}
               </Text>
             </View>
           </Card>
         ))}
+        <View style={{ height: 100 }} />
       </ScrollView>
     </View>
   );
@@ -115,67 +133,95 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: spacing.lg,
-    gap: spacing.md
+    gap: spacing.lg
   },
-  header: {
-    gap: spacing.xs
+  stickyHeader: {
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.md,
+    backgroundColor: colors.background,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border + "11",
+  },
+  headerTop: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: spacing.md
   },
   title: {
     color: colors.text,
-    fontSize: typography.title,
-    fontWeight: "800"
+    fontSize: 28,
+    fontWeight: "900",
+    letterSpacing: -0.5
   },
   subtitle: {
     color: colors.textMuted,
-    fontSize: typography.body
+    fontSize: typography.body,
+    marginTop: 2
   },
-  chartContainer: {
-    backgroundColor: colors.surface,
-    padding: spacing.md,
-    borderRadius: radius.lg,
-    elevation: 2,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8
+  avatarCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.primary,
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 2,
+    borderColor: colors.primarySoft
   },
-  chartTitle: {
-    fontSize: typography.caption,
-    fontWeight: "600",
-    color: colors.textMuted,
-    marginBottom: spacing.md,
-    textTransform: "uppercase"
+  avatarText: {
+    color: "#fff",
+    fontSize: 18,
+    fontWeight: "800"
+  },
+  chartWrapper: {
+    marginTop: spacing.sm,
+    paddingLeft: spacing.xs,
+    overflow: "hidden"
+  },
+  sectionHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginTop: spacing.md,
+    marginBottom: -spacing.xs
   },
   sectionTitle: {
-    fontSize: typography.heading,
-    fontWeight: "700",
+    fontSize: 22,
+    fontWeight: "900",
     color: colors.text,
-    marginTop: spacing.md
   },
   body: {
     color: colors.text,
     fontSize: typography.body,
-    lineHeight: 22
+    lineHeight: 24,
+    opacity: 0.9
   },
   onAccentText: {
     color: "#fff",
     fontSize: typography.body,
-    lineHeight: 22
+    lineHeight: 24,
+    fontWeight: "500"
   },
   onAccentTextMuted: {
     color: "#fff",
-    opacity: 0.8,
+    opacity: 0.7,
     fontSize: typography.caption,
-    marginTop: spacing.sm
+    fontWeight: "600"
   },
-  footer: {
-    marginTop: spacing.sm,
+  cardFooter: {
+    marginTop: spacing.md,
     borderTopWidth: 1,
     borderTopColor: colors.border,
-    paddingTop: spacing.xs
+    paddingTop: spacing.sm
+  },
+  onAccentFooter: {
+    borderTopColor: "rgba(255,255,255,0.2)"
   },
   caption: {
     color: colors.textMuted,
-    fontSize: typography.caption
+    fontSize: typography.caption,
+    fontWeight: "600",
+    textTransform: "uppercase"
   }
 });

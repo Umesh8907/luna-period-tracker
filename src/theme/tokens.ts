@@ -13,10 +13,11 @@ export const colors = {
   danger: "#B23A48",
   surfaceVariant: "#F0E7DF",
   // Phase Colors
-  phaseMenstrual: "#A53F5B",
-  phaseFollicular: "#8E44AD",
-  phaseOvulatory: "#2D7E7A",
-  phaseLuteal: "#C77C18",
+  phaseMenstrual: "#FF6B6B",
+  phaseFollicular: "#4ECDC4",
+  phaseOvulatory: "#FFD93D",
+  phaseLuteal: "#6C5CE7",
+  phaseUnknown: "#A0A0A0",
 } as const;
 
 export const spacing = {

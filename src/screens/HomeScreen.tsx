@@ -17,15 +17,16 @@ import { daysBetween, formatLongDate, getTodayISO } from "../lib/date";
 import { colors, radius, spacing, typography } from "../theme/tokens";
 import { CycleStatusHero } from "../components/CycleStatusHero";
 import { HealthInsightCard } from "../components/HealthInsightCard";
+import { PhaseDetailSheet } from "../components/PhaseDetailSheet";
 
 const { width } = Dimensions.get("window");
 
 const PHASE_THEMES: Record<CyclePhase, string> = {
-  menstrual: "#E96479",
-  follicular: "#7DB9B6",
-  ovulatory: "#F9D949",
-  luteal: "#8294C4",
-  unknown: colors.primary
+  menstrual: colors.phaseMenstrual,
+  follicular: colors.phaseFollicular,
+  ovulatory: colors.phaseOvulatory,
+  luteal: colors.phaseLuteal,
+  unknown: colors.phaseUnknown
 };
 
 function DailyBriefItem({ icon, label, value, themeColor }: { icon: any; label: string; value: string; themeColor: string }) {
@@ -47,6 +48,9 @@ export function HomeScreen() {
   const insets = useSafeAreaInsets();
   const { profile, entries, loading, fetchData } = useCycleStore();
   
+  const [selectedPhase, setSelectedPhase] = React.useState<any>(null);
+  const [isSheetVisible, setIsSheetVisible] = React.useState(false);
+  
   const today = useMemo(() => getTodayISO(), []);
   const prediction = useMemo(() => predictNextCycle(profile, entries), [profile, entries]);
   
@@ -58,6 +62,15 @@ export function HomeScreen() {
   const daysSinceStart = daysBetween(profile.lastPeriodStart, today);
   const currentDay = Math.max(1, (daysSinceStart % profile.averageCycleLength) + 1);
   const daysLeft = daysBetween(today, prediction.nextPeriodDate);
+
+  const handlePhasePress = (phaseName: string) => {
+    const info = PHASE_METADATA[phaseName as CyclePhase];
+    setSelectedPhase({
+        ...info,
+        color: PHASE_THEMES[phaseName as CyclePhase]
+    });
+    setIsSheetVisible(true);
+  };
 
   // Animated background color
   const backgroundColor = useDerivedValue(() => {
@@ -88,12 +101,6 @@ export function HomeScreen() {
             <Text style={styles.greeting}>Good Morning,</Text>
             <Text style={styles.name}>{profile.name} ✨</Text>
           </View>
-          <TouchableOpacity 
-            style={styles.profileButton}
-            onPress={() => navigation.navigate("Profile")}
-          >
-            <Ionicons name="person-circle-outline" size={32} color={colors.text} />
-          </TouchableOpacity>
         </Animated.View>
 
         {/* Hero */}
@@ -101,17 +108,20 @@ export function HomeScreen() {
           <CycleStatusHero 
             currentDay={currentDay}
             totalDays={profile.averageCycleLength}
+            avgPeriodLength={profile.averagePeriodLength}
             phase={phaseInfo.name}
             themeColor={themeColor}
             nextPeriodDays={daysLeft}
+            nextPeriodDate={prediction.nextPeriodDate}
+            onPhasePress={handlePhasePress}
           />
         </Animated.View>
 
         {/* Quick Log Action */}
         {!hasLoggedToday && (
-          <Animated.View entering={FadeInDown.delay(500).duration(800)}>
+          <Animated.View entering={FadeInDown.delay(400).duration(800)}>
             <TouchableOpacity 
-              style={[styles.quickLogCard, { borderColor: themeColor + '40' }]} 
+              style={[styles.quickLogCard, { borderColor: themeColor + '30' }]} 
               onPress={() => navigation.navigate("DailyLog")}
             >
               <View style={[styles.quickLogIcon, { backgroundColor: themeColor }]}>
@@ -119,14 +129,45 @@ export function HomeScreen() {
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={styles.quickLogTitle}>How are you feeling?</Text>
-                <Text style={styles.quickLogSubtitle}>Log your symptoms for better insights</Text>
+                <Text style={styles.quickLogSubtitle}>Log symptoms for better AI insights</Text>
               </View>
-              <Ionicons name="arrow-forward" size={20} color={themeColor} />
+              <Ionicons name="chevron-forward" size={20} color={themeColor} />
             </TouchableOpacity>
           </Animated.View>
         )}
 
-        {/* Daily Insights Section */}
+        {/* Cycle Statistics */}
+        <Animated.View entering={FadeInDown.delay(500).duration(800)}>
+          <Text style={styles.sectionTitle}>Cycle Statistics</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.statsScroll}>
+            <View style={styles.statCard}>
+              <Text style={styles.statLabel}>Cycle Average</Text>
+              <Text style={[styles.statValue, { color: themeColor }]}>{prediction.cycleLengthAverage} days</Text>
+            </View>
+            <View style={styles.statCard}>
+              <Text style={styles.statLabel}>Period Average</Text>
+              <Text style={[styles.statValue, { color: themeColor }]}>{prediction.periodLengthAverage} days</Text>
+            </View>
+            <View style={styles.statCard}>
+              <Text style={styles.statLabel}>Variation</Text>
+              <Text style={styles.statValue}>{prediction.isIrregular ? "Irregular" : "Regular"}</Text>
+            </View>
+          </ScrollView>
+        </Animated.View>
+
+        {/* Phase Wisdom */}
+        <Animated.View entering={FadeInDown.delay(600).duration(800)}>
+          <Text style={styles.sectionTitle}>Phase wisdom</Text>
+          <View style={[styles.wisdomCard, { backgroundColor: themeColor + '10', borderColor: themeColor + '20' }]}>
+            <View style={styles.wisdomHeader}>
+              <Ionicons name="sparkles" size={18} color={themeColor} />
+              <Text style={[styles.wisdomTitle, { color: themeColor }]}>Daily Insight</Text>
+            </View>
+            <Text style={styles.wisdomText}>{phaseInfo.brief}</Text>
+          </View>
+        </Animated.View>
+
+        {/* Daily Guidance Section */}
         <Animated.View entering={FadeInDown.delay(700).duration(800)}>
           <Text style={styles.sectionTitle}>Daily Guidance</Text>
           <View style={styles.briefGrid}>
@@ -145,9 +186,10 @@ export function HomeScreen() {
           </View>
         </Animated.View>
 
+
         {/* Health Insights */}
-        <Animated.View entering={FadeInDown.delay(900).duration(800)}>
-          <Text style={styles.sectionTitle}>For You</Text>
+        <Animated.View entering={FadeInDown.delay(800).duration(800)}>
+          <Text style={styles.sectionTitle}>Personalized for You</Text>
           <HealthInsightCard 
             title="Optimal Movement"
             description={phaseInfo.recommendation}
@@ -155,15 +197,21 @@ export function HomeScreen() {
             themeColor={themeColor}
           />
           <HealthInsightCard 
-            title="Cycle Phase Guide"
-            description={phaseInfo.brief}
-            icon="information-circle"
+            title="Phase Education"
+            description={phaseInfo.description}
+            icon="book"
             themeColor={themeColor}
           />
         </Animated.View>
 
-        <View style={{ height: 40 }} />
+        <View style={{ height: 120 }} />
       </ScrollView>
+
+      <PhaseDetailSheet 
+        isVisible={isSheetVisible}
+        onClose={() => setIsSheetVisible(false)}
+        phase={selectedPhase}
+      />
     </View>
   );
 }
@@ -223,10 +271,60 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
   },
   sectionTitle: {
+    fontSize: 20,
+    fontWeight: "900",
+    color: colors.text,
+    marginBottom: spacing.md,
+    letterSpacing: -0.5
+  },
+  statsScroll: {
+    gap: spacing.md,
+    paddingRight: spacing.lg,
+    paddingBottom: spacing.sm,
+  },
+  statCard: {
+    backgroundColor: colors.surface,
+    padding: spacing.md,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    minWidth: 140,
+  },
+  statLabel: {
+    fontSize: 10,
+    color: colors.textMuted,
+    textTransform: "uppercase",
+    fontWeight: "700",
+    marginBottom: 4,
+  },
+  statValue: {
     fontSize: 18,
     fontWeight: "800",
     color: colors.text,
-    marginBottom: spacing.md,
+  },
+  wisdomCard: {
+    padding: spacing.lg,
+    borderRadius: radius.xl,
+    borderWidth: 1,
+    marginBottom: spacing.lg,
+  },
+  wisdomHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  wisdomTitle: {
+    fontSize: 14,
+    fontWeight: "800",
+    textTransform: "uppercase",
+    letterSpacing: 1,
+  },
+  wisdomText: {
+    fontSize: 16,
+    color: colors.text,
+    lineHeight: 24,
+    fontWeight: "500",
   },
   briefGrid: {
     flexDirection: "row",
@@ -238,16 +336,16 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: colors.surface,
-    padding: spacing.sm,
-    borderRadius: radius.md,
+    padding: spacing.md, // Increased padding
+    borderRadius: radius.lg, // More rounded
     borderWidth: 1,
     borderColor: colors.border,
-    gap: spacing.sm,
+    gap: spacing.md,
   },
   briefIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 36,
+    height: 36,
+    borderRadius: 12, // Squircle style
     justifyContent: "center",
     alignItems: "center",
   },
@@ -258,7 +356,7 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
   briefValue: {
-    fontSize: 12,
+    fontSize: 14,
     color: colors.text,
     fontWeight: "800",
   }

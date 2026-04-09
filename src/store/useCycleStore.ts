@@ -96,56 +96,71 @@ export const useCycleStore = create<CycleState>((set, get) => ({
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    const { data, error } = await supabase
-      .from('cycle_entries')
-      .insert({ 
-        user_id: user.id,
-        date: entry.date,
-        is_period_day: entry.isPeriodDay,
-        symptoms: entry.symptoms
-      })
-      .select()
-      .single();
+    set({ loading: true });
+    try {
+      const { data, error } = await supabase
+        .from('cycle_entries')
+        .insert({ 
+          user_id: user.id,
+          date: entry.date,
+          is_period_day: entry.isPeriodDay,
+          symptoms: entry.symptoms
+        })
+        .select()
+        .single();
 
-    if (!error && data) {
-      const mapped = {
-        id: data.id,
-        date: data.date,
-        isPeriodDay: data.is_period_day,
-        symptoms: data.symptoms
-      };
-      set((state) => ({
-        entries: [mapped, ...state.entries]
-      }));
+      if (!error && data) {
+        const mapped = {
+          id: data.id,
+          date: data.date,
+          isPeriodDay: data.is_period_day,
+          symptoms: data.symptoms
+        };
+        set((state) => ({
+          entries: [mapped, ...state.entries]
+        }));
+      }
+    } finally {
+      set({ loading: false });
     }
   },
   updateEntry: async (id, updates) => {
-    const { error } = await supabase
-      .from('cycle_entries')
-      .update({
-        is_period_day: updates.isPeriodDay,
-        symptoms: updates.symptoms,
-        date: updates.date
-      })
-      .eq('id', id);
+    set({ loading: true });
+    try {
+      const { error } = await supabase
+        .from('cycle_entries')
+        .update({
+          is_period_day: updates.isPeriodDay,
+          symptoms: updates.symptoms,
+          date: updates.date
+        })
+        .eq('id', id);
 
-    if (!error) {
-      set((state) => ({
-        entries: state.entries.map(e => e.id === id ? { ...e, ...updates } : e)
-      }));
+      if (!error) {
+        set((state) => ({
+          entries: state.entries.map(e => e.id === id ? { ...e, ...updates } : e)
+        }));
+      }
+    } finally {
+      set({ loading: false });
     }
   },
 
   deleteEntry: async (id) => {
-    const { error } = await supabase
-      .from('cycle_entries')
-      .delete()
-      .eq('id', id);
+    set({ loading: true });
+    try {
+      const { error } = await supabase
+        .from('cycle_entries')
+        .delete()
+        .eq('id', id);
 
-    if (!error) {
-      set((state) => ({
-        entries: state.entries.filter(e => e.id !== id)
-      }));
+      if (!error) {
+        set((state) => ({
+          entries: state.entries.filter(e => e.id !== id)
+        }));
+      }
+    } finally {
+      set({ loading: false });
     }
   },
 
@@ -153,15 +168,20 @@ export const useCycleStore = create<CycleState>((set, get) => ({
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    const { error } = await supabase
-      .from('profiles')
-      .update(updates)
-      .eq('id', user.id);
+    set({ loading: true });
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update(updates)
+        .eq('id', user.id);
 
-    if (!error) {
-      set((state) => ({
-        profile: { ...state.profile, ...updates }
-      }));
+      if (!error) {
+        set((state) => ({
+          profile: { ...state.profile, ...updates }
+        }));
+      }
+    } finally {
+      set({ loading: false });
     }
   },
 
@@ -169,6 +189,7 @@ export const useCycleStore = create<CycleState>((set, get) => ({
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
+    set({ loading: true });
     const { profile } = get();
 
     const updates = { 
@@ -183,19 +204,23 @@ export const useCycleStore = create<CycleState>((set, get) => ({
 
     console.log("[useCycleStore] Attempting to complete onboarding with updates:", updates);
 
-    const { error } = await supabase
-      .from('profiles')
-      .update(updates)
-      .eq('id', user.id);
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update(updates)
+        .eq('id', user.id);
 
-    if (error) {
-      console.warn("[useCycleStore] Remote profile update failed, but proceeding locally:", error);
-      // We still proceed locally so the user isn't stuck behind a network error
+      if (error) {
+        console.warn("[useCycleStore] Remote profile update failed, but proceeding locally:", error);
+        // We still proceed locally so the user isn't stuck behind a network error
+      }
+
+      set((state) => ({
+        profile: { ...state.profile, ...data, hasCompletedOnboarding: true }
+      }));
+    } finally {
+      set({ loading: false });
     }
-
-    set((state) => ({
-      profile: { ...state.profile, ...data, hasCompletedOnboarding: true }
-    }));
   },
   
   seedDummyData: async () => {

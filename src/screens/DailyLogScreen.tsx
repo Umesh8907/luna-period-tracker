@@ -110,11 +110,19 @@ export function DailyLogScreen() {
   const scrollRef = React.useRef<ScrollView>(null);
 
   return (
-    <View style={styles.screen}>
+    <View style={[styles.screen, { paddingTop: insets.top }]}>
       {/* Date Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => changeDate(-1)} style={styles.dateNav}>
-          <Ionicons name="chevron-back" size={24} color={colors.primary} />
+        <TouchableOpacity 
+          onPress={() => changeDate(-1)} 
+          style={[styles.dateNav, selectedDate <= recentDates[0] && styles.dateNavDisabled]}
+          disabled={selectedDate <= recentDates[0]}
+        >
+          <Ionicons 
+            name="chevron-back" 
+            size={24} 
+            color={selectedDate <= recentDates[0] ? colors.textMuted : colors.primary} 
+          />
         </TouchableOpacity>
         
         <View style={styles.dateDisplay}>
@@ -122,8 +130,16 @@ export function DailyLogScreen() {
           <Text style={styles.dateTitle}>Daily Check-in</Text>
         </View>
 
-        <TouchableOpacity onPress={() => changeDate(1)} style={styles.dateNav}>
-          <Ionicons name="chevron-forward" size={24} color={colors.primary} />
+        <TouchableOpacity 
+          onPress={() => changeDate(1)} 
+          style={[styles.dateNav, selectedDate === getTodayISO() && styles.dateNavDisabled]}
+          disabled={selectedDate === getTodayISO()}
+        >
+          <Ionicons 
+            name="chevron-forward" 
+            size={24} 
+            color={selectedDate === getTodayISO() ? colors.textMuted : colors.primary} 
+          />
         </TouchableOpacity>
       </View>
 
@@ -192,7 +208,7 @@ export function DailyLogScreen() {
               <Text style={[styles.toggleText, isPeriod && styles.toggleTextActive]}>Yes, I'm on it</Text>
             </TouchableOpacity>
             <TouchableOpacity 
-              style={[styles.toggleBtn, !isPeriod && styles.toggleBtnInactive]}
+              style={[styles.toggleBtn, !isPeriod && styles.toggleBtnActive]}
               onPress={() => setIsPeriod(false)}
             >
               <Text style={[styles.toggleText, !isPeriod && styles.toggleTextActive]}>No</Text>
@@ -299,7 +315,7 @@ export function DailyLogScreen() {
           )}
         </TouchableOpacity>
         
-        <View style={{ height: 40 }} />
+        <View style={{ height: 100 }} />
       </ScrollView>
     </View>
   );
@@ -327,6 +343,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surfaceAlt,
     justifyContent: "center",
     alignItems: "center",
+  },
+  dateNavDisabled: {
+    opacity: 0.3,
   },
   dateDisplay: {
     alignItems: "center",

@@ -3,18 +3,28 @@ import { ScrollView, StyleSheet, Switch, Text, View, TouchableOpacity } from "re
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Card } from "../components/Card";
 import { useAuthStore } from "../features/auth/useAuthStore";
+import { Ionicons } from "@expo/vector-icons";
+import { useNavigation } from "@react-navigation/native";
 import { colors, spacing, typography, radius } from "../theme/tokens";
 import { useCycleStore } from "../store/useCycleStore";
 import { Alert } from "react-native";
 
 export function SettingsScreen() {
   const insets = useSafeAreaInsets();
+  const navigation = useNavigation<any>();
   const { signOut, user } = useAuthStore();
 
   return (
     <View style={[styles.screen, { paddingTop: insets.top }]}>
+      <View style={styles.header}>
+        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+          <Ionicons name="chevron-back" size={28} color={colors.text} />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Settings</Text>
+        <View style={{ width: 44 }} />
+      </View>
+
       <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
-        <Text style={styles.title}>Settings</Text>
         <Text style={styles.subtitle}>Privacy and consent should be first-class product features in a health app.</Text>
 
         <Card eyebrow="Current User" title={user?.email || "Signed In"}>
@@ -56,6 +66,21 @@ const styles = StyleSheet.create({
   content: {
     padding: spacing.lg,
     gap: spacing.md
+  },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.md,
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: "800",
+    color: colors.text,
+  },
+  backButton: {
+    padding: spacing.xs,
   },
   title: {
     color: colors.text,
