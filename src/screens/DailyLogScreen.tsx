@@ -15,70 +15,120 @@ import { Ionicons } from "@expo/vector-icons";
 import { useCycleStore } from "../store/useCycleStore";
 import { colors, spacing, radius, typography } from "../theme/tokens";
 import { formatLongDate, addDays, getTodayISO } from "../lib/date";
-import { CycleEntry } from "../features/cycle/types";
+import { CycleEntry, SymptomLog } from "../features/cycle/types";
+import { useRoute, useNavigation } from "@react-navigation/native";
+import { LogChip } from "../components/log/LogChip";
+import { LogCategory } from "../components/log/LogCategory";
 
-import { useRoute } from "@react-navigation/native";
+const MOODS = [
+  { id: "happy", label: "Happy", icon: "happy-outline" },
+  { id: "sensitive", label: "Sensitive", icon: "heart-outline" },
+  { id: "sad", label: "Sad", icon: "sad-outline" },
+  { id: "anxious", label: "Anxious", icon: "pulse-outline" },
+  { id: "irritable", label: "Irritable", icon: "flash-outline" },
+  { id: "stable", label: "Balanced", icon: "checkmark-circle-outline" },
+];
+
+const PHYSICAL = [
+  { id: "cramps", label: "Cramps", icon: "flame-outline" },
+  { id: "bloating", label: "Bloating", icon: "radio-button-on-outline" },
+  { id: "acne", label: "Acne", icon: "sunny-outline" },
+  { id: "headache", label: "Headache", icon: "bandage-outline" },
+  { id: "backache", label: "Backache", icon: "accessibility-outline" },
+  { id: "nausea", label: "Nausea", icon: "medical-outline" },
+];
+
+const DISCHARGE = [
+  { id: "none", label: "None", icon: "close-outline" },
+  { id: "sticky", label: "Sticky", icon: "water-outline" },
+  { id: "creamy", label: "Creamy", icon: "color-filter-outline" },
+  { id: "egg-white", label: "Egg White", icon: "egg-outline" },
+  { id: "watery", label: "Watery", icon: "boat-outline" },
+  { id: "spotting", label: "Spotting", icon: "help-buoy-outline" },
+];
+
+const LIFESTYLE = [
+  { id: "exercise", label: "Exercise", icon: "barbell-outline" },
+  { id: "alcohol", label: "Alcohol", icon: "wine-outline" },
+  { id: "travel", label: "Travel", icon: "airplane-outline" },
+  { id: "sex", label: "Sexual Activity", icon: "people-outline" },
+];
 
 export function DailyLogScreen() {
   const route = useRoute<any>();
+  const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const { entries, addEntry, updateEntry, loading, fetchData } = useCycleStore();
   
-  // Initialize with param date if available, otherwise today
   const [selectedDate, setSelectedDate] = useState(route.params?.date || getTodayISO());
   
-  // Sync selectedDate if route params change
-  useEffect(() => {
-    if (route.params?.date) {
-      setSelectedDate(route.params.date);
-    }
-  }, [route.params?.date]);
-  
-  // Local state for logging
   const [isPeriod, setIsPeriod] = useState(false);
-  const [mood, setMood] = useState<"low" | "stable" | "high">("stable");
-  const [energy, setEnergy] = useState<"low" | "medium" | "high">("medium");
+  const [flow, setFlow] = useState<any>("none");
+  const [moods, setMoods] = useState<string[]>([]);
+  const [physical, setPhysical] = useState<string[]>([]);
+  const [lifestyle, setLifestyle] = useState<string[]>([]);
+  const [energy, setEnergy] = useState<any>("medium");
+  const [stress, setStress] = useState<any>("low");
+  const [libido, setLibido] = useState<any>("medium");
+  const [discharge, setDischarge] = useState<any>("none");
   const [sleep, setSleep] = useState(7);
-  const [stress, setStress] = useState<"low" | "medium" | "high">("low");
-  const [flow, setFlow] = useState<"none" | "light" | "medium" | "heavy">("none");
 
   const selectedEntry = useMemo(() => 
     entries.find(e => e.date === selectedDate), 
     [entries, selectedDate]
   );
 
-  // Sync state when selectedEntry or selectedDate changes
   useEffect(() => {
     if (selectedEntry) {
       setIsPeriod(selectedEntry.isPeriodDay);
-      setMood(selectedEntry.symptoms.mood);
-      setEnergy(selectedEntry.symptoms.energy);
-      setSleep(selectedEntry.symptoms.sleepHours);
-      setStress(selectedEntry.symptoms.stressLevel);
       setFlow(selectedEntry.symptoms.flow);
+      setMoods(selectedEntry.symptoms.moods || []);
+      setPhysical(selectedEntry.symptoms.physical || []);
+      setLifestyle(selectedEntry.symptoms.lifestyle || []);
+      setEnergy(selectedEntry.symptoms.energy);
+      setStress(selectedEntry.symptoms.stress);
+      setLibido(selectedEntry.symptoms.libido || "medium");
+      setDischarge(selectedEntry.symptoms.discharge || "none");
+      setSleep(selectedEntry.symptoms.sleepHours);
     } else {
-      // Default values for new entry
       setIsPeriod(false);
-      setMood("stable");
-      setEnergy("medium");
-      setSleep(7);
-      setStress("low");
       setFlow("none");
+      setMoods([]);
+      setPhysical([]);
+      setLifestyle([]);
+      setEnergy("medium");
+      setStress("low");
+      setLibido("medium");
+      setDischarge("none");
+      setSleep(7);
     }
   }, [selectedEntry, selectedDate]);
 
+  const toggleMulti = (id: string, list: string[], setter: any) => {
+    if (list.includes(id)) {
+      setter(list.filter(i => i !== id));
+    } else {
+      setter([...list, id]);
+    }
+  };
+
   const handleSave = async () => {
+    const updatedSymptomLog: SymptomLog = {
+      flow,
+      moods,
+      physical,
+      lifestyle,
+      energy,
+      stress,
+      libido,
+      discharge,
+      sleepHours: sleep,
+    };
+
     const updatedEntry: Partial<CycleEntry> = {
       date: selectedDate,
       isPeriodDay: isPeriod,
-      symptoms: {
-        mood,
-        energy,
-        flow,
-        sleepHours: sleep,
-        stressLevel: stress,
-        cramps: isPeriod ? "mild" : "none", // simplified
-      }
+      symptoms: updatedSymptomLog
     };
 
     try {
@@ -89,7 +139,7 @@ export function DailyLogScreen() {
       }
       Alert.alert("Success", "Daily log saved successfully!");
     } catch (error) {
-      Alert.alert("Error", "Failed to save log. Please try again.");
+      Alert.alert("Error", "Failed to save log.");
     }
   };
 
@@ -101,17 +151,16 @@ export function DailyLogScreen() {
   const recentDates = useMemo(() => {
     const today = getTodayISO();
     const dates = [];
-    for (let i = 0; i < 6; i++) {
-      dates.push(addDays(today, -i));
+    for (let i = 0; i < 7; i++) {
+        dates.push(addDays(today, -i));
     }
-    return dates.reverse(); // Previous dates to the left, today on the right
+    return dates.reverse();
   }, []);
 
   const scrollRef = React.useRef<ScrollView>(null);
 
   return (
     <View style={[styles.screen, { paddingTop: insets.top }]}>
-      {/* Date Header */}
       <View style={styles.header}>
         <TouchableOpacity 
           onPress={() => changeDate(-1)} 
@@ -143,7 +192,6 @@ export function DailyLogScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* Quick Date Selector */}
       <View style={styles.quickDateContainer}>
         <ScrollView 
           ref={scrollRef}
@@ -155,23 +203,17 @@ export function DailyLogScreen() {
           {recentDates.map((date) => {
             const isSelected = date === selectedDate;
             const dateObj = new Date(`${date}T00:00:00`);
-            const dayNum = dateObj.getDate();
-            const dayName = dateObj.toLocaleDateString('en-US', { weekday: 'short' });
-            
             return (
               <TouchableOpacity 
                 key={date} 
-                onPress={() => setSelectedDate(date)}
-                style={[
-                  styles.dateChip, 
-                  isSelected && styles.dateChipSelected
-                ]}
+                onPress={() => setSelectedDate(date)} 
+                style={[styles.dateChip, isSelected && styles.dateChipSelected]}
               >
                 <Text style={[styles.dateChipDay, isSelected && styles.dateChipTextSelected]}>
-                  {dayName}
+                  {dateObj.toLocaleDateString('en-US', { weekday: 'short' })}
                 </Text>
                 <Text style={[styles.dateChipNum, isSelected && styles.dateChipTextSelected]}>
-                  {dayNum}
+                  {dateObj.getDate()}
                 </Text>
                 <View style={styles.dotContainer}>
                   {entries.find(e => e.date === date)?.isPeriodDay && (
@@ -187,135 +229,129 @@ export function DailyLogScreen() {
         </ScrollView>
       </View>
 
-      <ScrollView 
-        contentContainerStyle={styles.content} 
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl refreshing={loading} onRefresh={fetchData} tintColor={colors.primary} />
-        }
-      >
-        {/* Period Tracker */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Ionicons name="water-outline" size={20} color={colors.primary} />
-            <Text style={styles.sectionTitle}>Period Log</Text>
-          </View>
-          <View style={styles.toggleRow}>
-            <TouchableOpacity 
-              style={[styles.toggleBtn, isPeriod && styles.toggleBtnActive]}
-              onPress={() => setIsPeriod(true)}
-            >
-              <Text style={[styles.toggleText, isPeriod && styles.toggleTextActive]}>Yes, I'm on it</Text>
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={[styles.toggleBtn, !isPeriod && styles.toggleBtnActive]}
-              onPress={() => setIsPeriod(false)}
-            >
-              <Text style={[styles.toggleText, !isPeriod && styles.toggleTextActive]}>No</Text>
-            </TouchableOpacity>
-          </View>
-          
-          {isPeriod && (
-            <View style={styles.subSection}>
-              <Text style={styles.subTitle}>Flow Intensity</Text>
-              <View style={styles.segments}>
-                {["light", "medium", "heavy"].map((f: any) => (
-                  <TouchableOpacity 
-                    key={f}
-                    style={[styles.segment, flow === f && styles.segmentActive]}
-                    onPress={() => setFlow(f)}
-                  >
-                    <Text style={[styles.segmentText, flow === f && styles.segmentTextActive]}>
-                      {f.charAt(0).toUpperCase() + f.slice(1)}
-                    </Text>
-                  </TouchableOpacity>
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        {/* Period Section */}
+        <LogCategory title="Menstrual Flow" icon="water-outline">
+            <View style={styles.row}>
+                {["none", "light", "medium", "heavy"].map((f: any) => (
+                    <LogChip 
+                        key={f} 
+                        id={f} 
+                        label={f.charAt(0).toUpperCase() + f.slice(1)} 
+                        icon="water" 
+                        isSelected={flow === f} 
+                        onPress={() => {
+                            setFlow(f);
+                            setIsPeriod(f !== "none");
+                        }} 
+                        color={colors.phaseMenstrual}
+                    />
                 ))}
-              </View>
             </View>
-          )}
-        </View>
+        </LogCategory>
 
         {/* Mood Section */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Ionicons name="happy-outline" size={20} color={colors.primary} />
-            <Text style={styles.sectionTitle}>Mood</Text>
-          </View>
-          <View style={styles.segments}>
-            {[
-              { id: "low", icon: "sad-outline", label: "Low" },
-              { id: "stable", icon: "stop-outline", label: "Stable" },
-              { id: "high", icon: "happy-outline", label: "Great" }
-            ].map((m: any) => (
-              <TouchableOpacity 
-                key={m.id}
-                style={[styles.moodCard, mood === m.id && styles.moodCardActive]}
-                onPress={() => setMood(m.id)}
-              >
-                <Ionicons name={m.icon} size={28} color={mood === m.id ? colors.primary : colors.textMuted} />
-                <Text style={[styles.moodLabel, mood === m.id && styles.moodLabelActive]}>{m.label}</Text>
-              </TouchableOpacity>
+        <LogCategory title="Moods" icon="happy-outline">
+            {MOODS.map(m => (
+                <LogChip 
+                    key={m.id} 
+                    {...m} 
+                    isSelected={moods.includes(m.id)} 
+                    onPress={() => toggleMulti(m.id, moods, setMoods)} 
+                />
             ))}
-          </View>
-        </View>
+        </LogCategory>
+
+        {/* Physical Symptoms */}
+        <LogCategory title="Physical" icon="body-outline">
+            {PHYSICAL.map(p => (
+                <LogChip 
+                    key={p.id} 
+                    {...p} 
+                    isSelected={physical.includes(p.id)} 
+                    onPress={() => toggleMulti(p.id, physical, setPhysical)} 
+                    color={colors.accent}
+                />
+            ))}
+        </LogCategory>
+
+        {/* Discharge Section */}
+        <LogCategory title="Fluid / Discharge" icon="color-filter-outline">
+            {DISCHARGE.map(d => (
+                <LogChip 
+                    key={d.id} 
+                    {...d} 
+                    isSelected={discharge === d.id} 
+                    onPress={() => setDischarge(d.id)} 
+                    color={colors.phaseFollicular}
+                />
+            ))}
+        </LogCategory>
 
         {/* Sleep Duration */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Ionicons name="moon-outline" size={20} color={colors.primary} />
-            <Text style={styles.sectionTitle}>Sleep Duration</Text>
-          </View>
-          <View style={styles.counterRow}>
-            <TouchableOpacity style={styles.countBtn} onPress={() => setSleep(Math.max(0, sleep - 0.5))}>
-              <Ionicons name="remove" size={24} color={colors.primary} />
-            </TouchableOpacity>
-            <View style={styles.counterTextContainer}>
-              <Text style={styles.counterValue}>{sleep}</Text>
-              <Text style={styles.counterUnit}>hours</Text>
+        <LogCategory title="Sleep" icon="moon-outline">
+            <View style={styles.counterRow}>
+                <TouchableOpacity style={styles.countBtn} onPress={() => setSleep(Math.max(0, sleep - 0.5))}>
+                    <Ionicons name="remove" size={20} color={colors.primary} />
+                </TouchableOpacity>
+                <Text style={styles.counterValue}>{sleep} <Text style={styles.counterUnit}>hrs</Text></Text>
+                <TouchableOpacity style={styles.countBtn} onPress={() => setSleep(Math.min(24, sleep + 0.5))}>
+                    <Ionicons name="add" size={20} color={colors.primary} />
+                </TouchableOpacity>
             </View>
-            <TouchableOpacity style={styles.countBtn} onPress={() => setSleep(Math.min(24, sleep + 0.5))}>
-              <Ionicons name="add" size={24} color={colors.primary} />
-            </TouchableOpacity>
-          </View>
-        </View>
+        </LogCategory>
 
-        {/* Stress Level */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Ionicons name="flash-outline" size={20} color={colors.primary} />
-            <Text style={styles.sectionTitle}>Stress Level</Text>
-          </View>
-          <View style={styles.segments}>
-            {["low", "medium", "high"].map((s: any) => (
-              <TouchableOpacity 
-                key={s}
-                style={[styles.segment, stress === s && styles.segmentActive]}
-                onPress={() => setStress(s)}
-              >
-                <Text style={[styles.segmentText, stress === s && styles.segmentTextActive]}>
-                  {s.charAt(0).toUpperCase() + s.slice(1)}
-                </Text>
-              </TouchableOpacity>
+        {/* Lifestyle */}
+        <LogCategory title="Lifestyle" icon="fitness-outline">
+            {LIFESTYLE.map(l => (
+                <LogChip 
+                    key={l.id} 
+                    {...l} 
+                    isSelected={lifestyle.includes(l.id)} 
+                    onPress={() => toggleMulti(l.id, lifestyle, setLifestyle)} 
+                    color={colors.success}
+                />
             ))}
-          </View>
-        </View>
+        </LogCategory>
 
-        <TouchableOpacity 
-          style={styles.saveButton} 
-          onPress={handleSave}
-          disabled={loading}
-        >
-          {loading ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <>
-              <Ionicons name="checkmark-circle" size={20} color="#fff" />
-              <Text style={styles.saveButtonText}>{selectedEntry ? "Update Log" : "Save Daily Log"}</Text>
-            </>
-          )}
+        {/* Levels */}
+        <LogCategory title="Levels" icon="stats-chart-outline">
+            <View style={styles.levelGroup}>
+                <Text style={styles.levelLabel}>Energy</Text>
+                <View style={styles.row}>
+                    {["low", "medium", "high"].map((e: any) => (
+                        <LogChip 
+                            key={e} 
+                            id={e} 
+                            label={e} 
+                            icon="battery-charging" 
+                            isSelected={energy === e} 
+                            onPress={() => setEnergy(e)} 
+                        />
+                    ))}
+                </View>
+                <Text style={styles.levelLabel}>Stress</Text>
+                <View style={styles.row}>
+                    {["low", "medium", "high"].map((s: any) => (
+                        <LogChip 
+                            key={s} 
+                            id={s} 
+                            label={s} 
+                            icon="flash" 
+                            isSelected={stress === s} 
+                            onPress={() => setStress(s)} 
+                            color={colors.warning}
+                        />
+                    ))}
+                </View>
+            </View>
+        </LogCategory>
+
+        <TouchableOpacity style={styles.saveButton} onPress={handleSave} disabled={loading}>
+          {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.saveButtonText}>{selectedEntry ? "Update Entry" : "Save Log"}</Text>}
         </TouchableOpacity>
         
-        <View style={{ height: 100 }} />
+        <View style={{ height: 120 }} />
       </ScrollView>
     </View>
   );
@@ -429,166 +465,74 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
   },
   content: {
-    padding: spacing.lg,
-    gap: spacing.xl,
+    padding: spacing.md,
   },
-  section: {
-    gap: spacing.md,
-  },
-  sectionHeader: {
+  row: {
     flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.sm,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: "800",
-    color: colors.text,
-  },
-  subSection: {
-    marginTop: spacing.md,
-    gap: spacing.sm,
-  },
-  subTitle: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: colors.textMuted,
-  },
-  toggleRow: {
-    flexDirection: "row",
-    backgroundColor: colors.surfaceAlt,
-    borderRadius: radius.lg,
-    padding: 6,
-    gap: 6,
-  },
-  toggleBtn: {
-    flex: 1,
-    paddingVertical: 14,
-    alignItems: "center",
-    borderRadius: radius.md,
-  },
-  toggleBtnActive: {
-    backgroundColor: colors.primary,
-    elevation: 4,
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-  },
-  toggleBtnInactive: {
-    backgroundColor: colors.surface,
-  },
-  toggleText: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: colors.textMuted,
-  },
-  toggleTextActive: {
-    color: "#fff",
-  },
-  segments: {
-    flexDirection: "row",
-    gap: spacing.md,
-  },
-  segment: {
-    flex: 1,
-    backgroundColor: colors.surface,
-    paddingVertical: spacing.md,
-    alignItems: "center",
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  segmentActive: {
-    backgroundColor: colors.primarySoft,
-    borderColor: colors.primary,
-  },
-  segmentText: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: colors.text,
-  },
-  segmentTextActive: {
-    color: colors.primary,
-  },
-  moodCard: {
-    flex: 1,
-    backgroundColor: colors.surface,
-    paddingVertical: spacing.lg,
-    alignItems: "center",
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-    gap: spacing.sm,
-  },
-  moodCardActive: {
-    backgroundColor: colors.primarySoft,
-    borderColor: colors.primary,
-  },
-  moodLabel: {
-    fontSize: 13,
-    fontWeight: "700",
-    color: colors.textMuted,
-  },
-  moodLabelActive: {
-    color: colors.primary,
+    flexWrap: "wrap",
+    gap: 4,
   },
   counterRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     backgroundColor: colors.surface,
-    padding: spacing.lg,
-    borderRadius: radius.lg,
+    padding: spacing.md,
+    borderRadius: radius.md,
     borderWidth: 1,
     borderColor: colors.border,
+    width: "100%",
   },
   countBtn: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: colors.primarySoft,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.surfaceAlt,
     justifyContent: "center",
     alignItems: "center",
   },
-  counterTextContainer: {
-    alignItems: "center",
-  },
   counterValue: {
-    fontSize: 32,
+    fontSize: 24,
     fontWeight: "900",
     color: colors.text,
   },
   counterUnit: {
     fontSize: 12,
     color: colors.textMuted,
+    fontWeight: "600",
+  },
+  levelGroup: {
+    width: "100%",
+    gap: spacing.sm,
+  },
+  levelLabel: {
+    fontSize: 12,
     fontWeight: "700",
-    textTransform: "uppercase",
+    color: colors.textMuted,
+    marginTop: spacing.xs,
   },
   saveButton: {
     backgroundColor: colors.primary,
-    paddingVertical: spacing.lg,
-    borderRadius: radius.xl,
-    flexDirection: "row",
+    paddingVertical: 16,
+    borderRadius: radius.lg,
     alignItems: "center",
     justifyContent: "center",
-    gap: spacing.sm,
-    marginTop: spacing.md,
+    marginTop: spacing.lg,
     ...Platform.select({
       ios: {
         shadowColor: colors.primary,
-        shadowOffset: { width: 0, height: 8 },
+        shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.3,
-        shadowRadius: 12,
+        shadowRadius: 8,
       },
       android: {
-        elevation: 8,
+        elevation: 4,
       },
     }),
   },
   saveButtonText: {
     color: "#fff",
-    fontSize: 17,
+    fontSize: 16,
     fontWeight: "800",
   },
 });

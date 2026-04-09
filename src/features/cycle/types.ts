@@ -1,12 +1,24 @@
 export type SymptomSeverity = "none" | "mild" | "moderate" | "severe";
 
 export type SymptomLog = {
-  cramps: SymptomSeverity;
-  mood: "low" | "stable" | "high";
-  energy: "low" | "medium" | "high";
+  // Period & Fluid
   flow: "none" | "light" | "medium" | "heavy";
+  discharge?: "none" | "sticky" | "creamy" | "egg-white" | "watery";
+  
+  // Categorized Symptoms (Multi-select)
+  moods: string[]; // e.g., ['happy', 'anxious']
+  physical: string[]; // e.g., ['bloating', 'acne', 'cramps']
+  lifestyle: string[]; // e.g., ['exercise', 'alcohol']
+  
+  // Levels (Single-select)
+  energy: "low" | "medium" | "high";
+  stress: "low" | "medium" | "high";
+  libido?: "low" | "medium" | "high";
+  
+  // Quantitative
   sleepHours: number;
-  stressLevel: "low" | "medium" | "high";
+  weight?: number;
+  
   notes?: string;
 };
 

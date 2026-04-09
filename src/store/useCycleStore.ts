@@ -252,11 +252,13 @@ export const useCycleStore = create<CycleState>((set, get) => ({
             is_period_day: true,
             symptoms: { 
               flow: i === 0 || i === 4 ? 'light' : 'heavy', 
-              mood: 'low', 
-              energy: 'low', 
-              cramps: i < 2 ? 'moderate' : 'mild',
+              discharge: 'creamy',
+              moods: i < 2 ? ['sensitive', 'low'] : ['stable'], 
+              physical: i < 2 ? ['cramps', 'bloating'] : [],
+              lifestyle: [], 
+              energy: i < 2 ? 'low' : 'medium', 
+              stress: stressMetas[Math.floor(Math.random() * 3)] as any,
               sleepHours: 6 + Math.random() * 2,
-              stressLevel: stressMetas[Math.floor(Math.random() * 3)]
             }
           });
         }
