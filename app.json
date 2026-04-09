@@ -1,0 +1,38 @@
+{
+  "expo": {
+    "name": "Luna",
+    "slug": "luna-ai-period-tracker",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "icon": "./assets/icon.png",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#FDFBF7"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.umesh.luna",
+      "infoPlist": {
+        "NSHealthShareUsageDescription": "Luna needs access to your health data to provide better cycle insights.",
+        "NSHealthUpdateUsageDescription": "Luna needs to update your symptoms to keep your health data in sync."
+      }
+    },
+    "android": {
+      "package": "com.umesh.luna",
+      "permissions": [
+        "RECEIVE_BOOT_COMPLETED",
+        "SCHEDULE_EXACT_ALARM"
+      ]
+    },
+    "plugins": [
+      "expo-secure-store",
+      "expo-notifications",
+      "expo-asset"
+    ]
+  }
+}
